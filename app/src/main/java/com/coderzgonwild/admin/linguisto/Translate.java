@@ -1,11 +1,17 @@
 package com.coderzgonwild.admin.linguisto;
 
+import android.app.Activity;
 import android.content.Intent;
 import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
+import android.os.Environment;
+import android.os.StrictMode;
 import android.provider.MediaStore;
 import android.support.annotation.Nullable;
+import android.support.v4.content.FileProvider;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.View;
 import android.widget.Button;
 import android.widget.ImageView;
@@ -27,6 +33,10 @@ import com.google.api.services.vision.v1.model.EntityAnnotation;
 import com.google.api.services.vision.v1.model.Feature;
 import com.google.api.services.vision.v1.model.Image;
 import org.apache.commons.io.IOUtils;
+import org.apache.commons.io.output.ByteArrayOutputStream;
+
+import java.io.File;
+import java.io.FileOutputStream;
 import java.io.InputStream;
 import java.io.IOException;
 import java.util.List;
@@ -45,9 +55,11 @@ import java.util.Arrays;
 
 public class Translate extends AppCompatActivity {
 
-    Vision vision;
+
     private ImageView imageView;
-  //  private Vision vision;
+
+    private String photoFilename = "item.png";
+    private File photoFile;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -56,15 +68,39 @@ public class Translate extends AppCompatActivity {
         Button btnCamera = (Button)findViewById(R.id.btnCamera);
         imageView = (ImageView)findViewById(R.id.imageView);
 
+        File folder = new File("/sdcard/linguistopics/");
+        folder.mkdirs();
+
         btnCamera.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 Intent intent = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
+
+//                File imagesFolder = new File(Environment.getExternalStorageDirectory(), "MyImages");
+//                imagesFolder.mkdirs();
+//                File image = new File(imagesFolder, "item.jpg");
+//                Uri uriSavedImage = Uri.fromFile(image);
+//                intent.putExtra(MediaStore.EXTRA_OUTPUT, uriSavedImage);
+
+                final File root = new File(Environment.getExternalStorageDirectory() + File.separator + "MyDir" + File.separator);
+                root.mkdirs();
+                final String fname = "img_"+ System.currentTimeMillis() + ".jpg";
+                final File sdImageMainDirectory = new File(root, fname);
+                Uri mImageUri = Uri.fromFile(sdImageMainDirectory);
+
+                intent.putExtra(android.provider.MediaStore.EXTRA_OUTPUT, mImageUri);
                 startActivityForResult(intent, 0);
+
+
+                setUpVision(mImageUri);
+
             }
+
+
+
         });
 
-        setUpVision();
+
     }
 
     @Override
@@ -72,11 +108,14 @@ public class Translate extends AppCompatActivity {
         super.onActivityResult(requestCode, resultCode, data);
         Bitmap bitmap = (Bitmap)data.getExtras().get("data");
         imageView.setImageBitmap(bitmap);
+
+
     }
 
-    protected void setUpVision(){
-        //sets up the cloud api builder
 
+    protected void setUpVision(Uri uri){
+        //sets up the cloud api builder
+        final Uri uriNew = uri;
 
         HttpTransport httpTransport = new NetHttpTransport();
         JsonFactory jsonFactory = new AndroidJsonFactory();
@@ -103,7 +142,9 @@ public class Translate extends AppCompatActivity {
             public void run() {
 
                 try {
-                    InputStream inputStream = getResources().openRawResource(R.raw.pen);
+
+                    InputStream inputStream = getContentResolver().openInputStream(uriNew);
+                   // InputStream inputStream = getResources().openRawResource(R.raw.pen);
                     byte[] photoData = IOUtils.toByteArray(inputStream);
                     inputStream.close();
 
@@ -136,9 +177,9 @@ public class Translate extends AppCompatActivity {
 
                     int numberOfLabels = labels.size();
                     String labelsObtained = "";
-                    for(int i = 0; i < numberOfLabels; i++){
-                        labelsObtained += "\n " + labels.get(i) + " ";
-                    }
+                   // for(int i = 0; i < numberOfLabels; i++){
+                        labelsObtained += "\n " + labels.get(0) + " ";
+                  //  }
 
                     final String message =  new String(labelsObtained);
 
